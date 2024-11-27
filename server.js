@@ -60,7 +60,7 @@ let db
 async function connectToDatabase() {
     try {
         await client.connect();
-        db = client.db('afterSchoolDB');
+        db = client.db('intellecthubDB');
         console.log('Connected to MongoDB Atlas');
         
         // Only start the server after DB connection is established
