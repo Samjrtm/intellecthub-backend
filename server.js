@@ -76,4 +76,34 @@ app.get('/api/lessons', async (req, res) => {
     }
 });
 
+app.put('/api/lessons/:id', async (req, res) => {
+    try {
+        const lessonId = req.params.id;
+
+        // Validate ID format
+        if (!ObjectId.isValid(lessonId)) {
+            return res.status(400).json({ message: "Invalid ID format" });
+        }
+
+        // Update the document
+        const result = await db.collection('lessons').updateOne(
+            { _id: new ObjectId(lessonId) },
+            { $set: req.body } // Update any provided fields
+        );
+
+        // Check if the document exists
+        if (result.matchedCount === 0) {
+            return res.status(404).json({ message: "Lesson not found" });
+        }
+
+        // Fetch and return the updated document
+        const updatedLesson = await db.collection('lessons').findOne(
+            { _id: new ObjectId(lessonId) }
+        );
+
+        res.status(200).json(updatedLesson);
+    } catch (error) {
+        res.status(500).json({ message: "Internal Server Error", error: error.message });
+    }
+});
 });
