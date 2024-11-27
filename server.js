@@ -53,7 +53,7 @@ app.use('/images', express.static(path.join(__dirname, 'public/images')));
 
 
 //Mongodb Connection
-const uri = process.env.MONGODB_URI;
+const uri = process.env.MONGODB_URI.replace('majority=intellect-hub', 'majority');
 const client = new MongoClient(uri);
 let db
 
