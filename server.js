@@ -27,44 +27,46 @@ app.use((req, res, next) => {
     //Capture response status
     res.on('finish', () => {
         console.log(`[${timestamp}] Response Status: ${res.statusCode}`);
-        console.log('-'.repeat(50));
+        console.log('-'.repeat(50));// Seperator so you can read it better
     });
     next();
+});
 
-    //Static Files middleware that checks if images exist
-    app.use('/images', (req, res, next) => {
-        const imagePath = path.join(__dirname, 'public/images', req.path);
-    
-        fs.access(imagePath, fs.constants.F_OK, (err) => {
-            if (err) {
-                console.log(`[${new Date().toISOString()}] Image not found:${req.path}`);
-                return res.status(404).json({
-                    message: 'Image not Found',
-                    requestedPath: req.path
-                });
-            }
-            next()
-        })
-    });
+//Static Files Middleware - Check if image exists
+app.use('/images', (req, res, next) => {
+    const imagePath = path.join(__dirname, 'public/images', req.path);
 
-    //Serves static files from image directory
-    app.use('/images', express.static(path.join(__dirname, 'public/images')));
-
-    //MongoDB connection
-    const uri = process.env.MONGODB_URI;
-    const client = new MongoClient(uri);
-    let db
-
-    async function connectToDatabase(){
-        try{
-            await client.connect();
-            db = client.db('intellecthubDB'); //This is the space for the database, don't forget to inser it
-            console.log('Connected to Mongo db atlas');
-        }catch(error){
-            console.error('MongoDB connection error:', error)
+    fs.access(imagePath, fs.constants.F_OK, (err) => {
+        if (err) {
+            console.log(`[${new Date().toISOString()}] Image not found:${req.path}`);
+            return res.status(404).json({
+                message: 'Image not Found',
+                requestedPath: req.path
+            });
         }
+        next()
+    })
+});
+
+//Serve static files from 'images' directory
+app.use('/images', express.static(path.join(__dirname, 'public/images')));
+
+
+//Mongodb Connection
+const uri = process.env.MONGODB_URI;
+const client = new MongoClient(uri);
+let db
+
+async function connectToDatabase(){
+    try{
+        await client.connect();
+        db = client.db('afterSchoolDB'); //This is the space for the database, don't forget to inser it
+        console.log('Connected to Mongo db atlas');
+    }catch(error){
+        console.error('MongoDB connection error:', error)
     }
-    connectToDatabase();
+}
+connectToDatabase();
 
 //Lesson Routes
 app.get('/api/lessons', async (req, res) => {
@@ -125,11 +127,59 @@ app.post('/api/orders', async (req, res) => {
     }
 });
 
+app.get('/api/orders', async (req, res) => {
+    try {
+        const orders = await db.collection('orders').aggregate([
+            {
+                $lookup: {
+                    from: 'lessons',
+                    localField: 'lessonIds',
+                    foreignField: '_id',
+                    as: 'lessons'
+                }
+            }
+        ]).toArray();
+        res.json(orders);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+app.delete('/api/orders/:id', async (req, res) => {
+    try {
+        // First, get the order details before deleting
+        const order = await db.collection('orders').findOne({
+            _id: new ObjectId(req.params.id)
+        });
+
+        if (!order) {
+            return res.status(404).json({ message: "Order not found" });
+        }
+
+        // For each lesson in the order, increment the spaces
+        for (const lessonId of order.lessonIds) {
+            await db.collection('lessons').updateOne(
+                { _id: lessonId },
+                { $inc: { spaces: 1 } } // Increment spaces by 1
+            );
+        }
+
+        // Delete the order
+        const result = await db.collection('orders').deleteOne({
+            _id: new ObjectId(req.params.id)
+        });
+
+        res.json({ message: "Order deleted and lesson spaces updated" });
+    } catch (error) {
+        console.error('Error deleting order:', error);
+        res.status(500).json({ message: error.message });
+    }
+});
+
 //Test route for images
 app.get('/test-image/:imageName', (req,res) => {
     res.redirect(`/images/${req.params.imageName}`);
 });
-
 // Error handling middleware
 app.use((err, req, res, next) => {
     console.error(err.stack);
@@ -148,4 +198,7 @@ process.on('SIGINT', async () => {
     }
 });
 
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
 });
