@@ -57,13 +57,20 @@ const uri = process.env.MONGODB_URI;
 const client = new MongoClient(uri);
 let db
 
-async function connectToDatabase(){
-    try{
+async function connectToDatabase() {
+    try {
         await client.connect();
-        db = client.db('afterSchoolDB'); //This is the space for the database, don't forget to inser it
-        console.log('Connected to Mongo db atlas');
-    }catch(error){
-        console.error('MongoDB connection error:', error)
+        db = client.db('afterSchoolDB');
+        console.log('Connected to MongoDB Atlas');
+        
+        // Only start the server after DB connection is established
+        const PORT = process.env.PORT || 3000;
+        app.listen(PORT, () => {
+            console.log(`Server running on port ${PORT}`);
+        });
+    } catch (error) {
+        console.error('MongoDB connection error:', error);
+        process.exit(1); // Exit if cannot connect to database
     }
 }
 connectToDatabase();
