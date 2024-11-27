@@ -30,4 +30,20 @@ app.use((req, res, next) => {
         console.log('-'.repeat(50));
     });
     next();
+
+    //Static Files middleware that checks if images exist
+    app.use('/images', (req, res, next) => {
+        const imagePath = path.join(__dirname, 'public/images', req.path);
+    
+        fs.access(imagePath, fs.constants.F_OK, (err) => {
+            if (err) {
+                console.log(`[${new Date().toISOString()}] Image not found:${req.path}`);
+                return res.status(404).json({
+                    message: 'Image not Found',
+                    requestedPath: req.path
+                });
+            }
+            next()
+        })
+    });
 });
