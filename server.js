@@ -65,4 +65,15 @@ app.use((req, res, next) => {
         }
     }
     connectToDatabase();
+
+//Lesson Routes
+app.get('/api/lessons', async (req, res) => {
+    try{
+        const lessons = await db.collection('lessons').find({}).toArray();
+        res.json(lessons);
+    }catch(error){
+        res.status(500).json({message:error.message});
+    }
+});
+
 });
