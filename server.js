@@ -46,4 +46,23 @@ app.use((req, res, next) => {
             next()
         })
     });
+
+    //Serves static files from image directory
+    app.use('/images', express.static(path.join(__dirname, 'public/images')));
+
+    //MongoDB connection
+    const uri = process.env.MONGODB_URI;
+    const client = new MongoClient(uri);
+    let db
+
+    async function connectToDatabase(){
+        try{
+            await client.connect();
+            db = client.db('intellecthubDB'); //This is the space for the database, don't forget to inser it
+            console.log('Connected to Mongo db atlas');
+        }catch(error){
+            console.error('MongoDB connection error:', error)
+        }
+    }
+    connectToDatabase();
 });
