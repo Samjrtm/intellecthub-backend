@@ -129,4 +129,10 @@ app.post('/api/orders', async (req, res) => {
 app.get('/test-image/:imageName', (req,res) => {
     res.redirect(`/images/${req.params.imageName}`);
 });
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).json({ message: 'Something went wrong!' });
+});
 });
