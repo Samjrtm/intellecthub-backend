@@ -16,15 +16,12 @@ app.use((req, res, next) => {
     const url = req.url;
     const ip = req.ip;
 
-    //Log request Details
     console.log(`[${timestamp}] ${method} ${url} - IP: ${ip}`);
 
-    //Log request body if it exists
     if (Object.keys(req.body).length > 0){
         console.log('Request Body:', JSON.stringify(req.body,null,2));
     }
 
-    //Capture response status
     res.on('finish', () => {
         console.log(`[${timestamp}] Response Status: ${res.statusCode}`);
         console.log('-'.repeat(50));// Seperator so you can read it better
@@ -32,7 +29,6 @@ app.use((req, res, next) => {
     next();
 });
 
-//Static Files Middleware - Check if image exists
 app.use('/images', (req, res, next) => {
     const imagePath = path.join(__dirname, 'public/images', req.path);
 
@@ -48,7 +44,6 @@ app.use('/images', (req, res, next) => {
     })
 });
 
-//Serve static files from 'images' directory
 app.use('/images', express.static(path.join(__dirname, 'public/images')));
 
 
@@ -60,7 +55,7 @@ let db
 async function connectToDatabase(){
     try{
         await client.connect();
-        db = client.db('intellecthubDB'); //This is the space for the database, don't forget to inser it
+        db = client.db('intellecthubDB'); 
         console.log('Connected to Mongo db atlas');
     }catch(error){
         console.error('MongoDB connection error:', error)
@@ -82,12 +77,12 @@ app.put('/api/lessons/:id', async (req, res) => {
     try {
         const lessonId = req.params.id;
 
-        // Validate ID format
+        
         if (!ObjectId.isValid(lessonId)) {
             return res.status(400).json({ message: "Invalid ID format" });
         }
 
-        // Update the document
+        
         const result = await db.collection('lessons').updateOne(
             { _id: new ObjectId(lessonId) },
             { $set: req.body } // Update any provided fields
@@ -145,45 +140,15 @@ app.get('/api/orders', async (req, res) => {
     }
 });
 
-app.delete('/api/orders/:id', async (req, res) => {
-    try {
-        // First, get the order details before deleting
-        const order = await db.collection('orders').findOne({
-            _id: new ObjectId(req.params.id)
-        });
-
-        if (!order) {
-            return res.status(404).json({ message: "Order not found" });
-        }
-
-        // For each lesson in the order, increment the spaces
-        for (const lessonId of order.lessonIds) {
-            await db.collection('lessons').updateOne(
-                { _id: lessonId },
-                { $inc: { spaces: 1 } } // Increment spaces by 1
-            );
-        }
-
-        // Delete the order
-        const result = await db.collection('orders').deleteOne({
-            _id: new ObjectId(req.params.id)
-        });
-
-        res.json({ message: "Order deleted and lesson spaces updated" });
-    } catch (error) {
-        console.error('Error deleting order:', error);
-        res.status(500).json({ message: error.message });
-    }
-});
-
 //Test route for images
 app.get('/test-image/:imageName', (req,res) => {
     res.redirect(`/images/${req.params.imageName}`);
 });
+
 // Error handling middleware
 app.use((err, req, res, next) => {
-    console.error(err.stack);
-    res.status(500).json({ message: 'Something went wrong!' });
+    console.error('Unhandled Error:', err.stack);
+    res.status(500).json({ message: 'Something went wrong!', error: err.message });
 });
 
 // shutdown
